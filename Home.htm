@@ -1,0 +1,417 @@
+import React, { useState, useEffect } from 'react';
+import { MapPin, Navigation, Car, Clock, Route } from 'lucide-react';
+
+const CentennialTrailNav = () => {
+  const [fromTrailhead, setFromTrailhead] = useState('');
+  const [toTrailhead, setToTrailhead] = useState('');
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [runningPace, setRunningPace] = useState('9:00'); // Default pace
+
+  // Trailhead data with GPS coordinates - OFFICIAL LIST
+  const trailheads = [
+    {
+      id: 'snohomish',
+      name: 'Snohomish - Snohomish',
+      description: '6th St and Maple Ave, Snohomish',
+      lat: 47.9186131,
+      lng: -122.0878193,
+      mile: 0
+    },
+    {
+      id: 'pilchuck',
+      name: 'Snohomish - Pilchuck',
+      description: '5801 S. Machias Rd, Snohomish',
+      lat: 47.9422299,
+      lng: -122.0761712,
+      mile: 3
+    },
+    {
+      id: 'machias',
+      name: 'Snohomish - Machias',
+      description: '1624 Virginia St, Snohomish',
+      lat: 47.9813033,
+      lng: -122.0487681,
+      mile: 5
+    },
+    {
+      id: '20th-street',
+      name: 'Lake Stevens - 20th St',
+      description: '13205 20th St NE, Lake Stevens',
+      lat: 48.0170156,
+      lng: -122.0527524,
+      mile: 6
+    },
+    {
+      id: 'sr-92',
+      name: 'Lake Stevens - SR 92',
+      description: '3651 127th Ave NE, Lake Stevens',
+      lat: 48.0309112,
+      lng: -122.058717,
+      mile: 8
+    },
+    {
+      id: 'rhododendron',
+      name: 'Lake Stevens - Rhododendron',
+      description: '10911 54th PL NE',
+      lat: 48.0455524,
+      lng: -122.0835571,
+      mile: 11
+    },
+    {
+      id: 'lake-cassidy',
+      name: 'Lake Stevens - Lake Cassidy (Disabled Parking Only)',
+      description: '6216 105th Ave NE, Lake Stevens',
+      lat: 48.0525156,
+      lng: -122.0897606,
+      mile: 12
+    },
+    {
+      id: 'getchell',
+      name: 'Arlington - Getchell',
+      description: '8318 Westlund Rd, Arlington',
+      lat: 48.0715871,
+      lng: -122.1008365,
+      mile: 14
+    },
+    {
+      id: 'armar-road',
+      name: 'Arlington - Armar Rd',
+      description: '15333 67th Ave NE, Arlington',
+      lat: 48.1349545,
+      lng: -122.1403999,
+      mile: 18
+    },
+    {
+      id: 'legion-park',
+      name: 'Arlington - Legion Park',
+      description: '114 N Olympic Ave, Arlington',
+      lat: 48.19304,
+      lng: -122.1269718,
+      mile: 22
+    },
+    {
+      id: 'haller-park',
+      name: 'Arlington - Haller Park',
+      description: '1100 West Ave, Arlington',
+      lat: 48.2023182,
+      lng: -122.1279629,
+      mile: 23
+    },
+    {
+      id: 'bryant',
+      name: 'Arlington - Bryant',
+      description: 'SR9 & Stanwood-Bryant Rd, Arlington',
+      lat: 48.239229,
+      lng: -122.1586967,
+      mile: 26
+    },
+    {
+      id: 'nakashima-barn',
+      name: 'Arlington - Nakashima Heritage Barn',
+      description: '32325 SR 9, Arlington',
+      lat: 48.2908691,
+      lng: -122.1974288,
+      mile: 30
+    }
+  ];
+
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log('Location access denied');
+        }
+      );
+    }
+  }, []);
+
+  // Generate pace options from 8:00 to 15:00 with 30-second increments
+  const generatePaceOptions = () => {
+    const paces = [];
+    for (let minutes = 8; minutes <= 15; minutes++) {
+      paces.push(`${minutes}:00`);
+      if (minutes < 15) {
+        paces.push(`${minutes}:30`);
+      }
+    }
+    return paces;
+  };
+
+  // Convert pace string to total seconds per mile
+  const paceToSeconds = (pace) => {
+    const [minutes, seconds] = pace.split(':').map(Number);
+    return minutes * 60 + seconds;
+  };
+
+  // Convert total seconds to MM:SS format
+  const secondsToTimeFormat = (totalSeconds) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.round(totalSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate running time based on trail distance and pace
+  const getRunningTime = (trailMiles, pace) => {
+    const secondsPerMile = paceToSeconds(pace);
+    const totalSeconds = trailMiles * secondsPerMile;
+    return secondsToTimeFormat(totalSeconds);
+  };
+
+  const openInMaps = (fromLat, fromLng, toLat, toLng, destinationName) => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    
+    console.log('Navigation request:', { fromLat, fromLng, toLat, toLng, destinationName });
+    
+    if (isIOS) {
+      // Apple Maps
+      const url = `http://maps.apple.com/?saddr=${fromLat},${fromLng}&daddr=${toLat},${toLng}&dirflg=d`;
+      console.log('iOS URL:', url);
+      window.open(url);
+    } else if (isAndroid) {
+      // Google Maps
+      const url = `https://www.google.com/maps/dir/${fromLat},${fromLng}/${toLat},${toLng}`;
+      console.log('Android URL:', url);
+      window.open(url);
+    } else {
+      // Web browser - Google Maps
+      const url = `https://www.google.com/maps/dir/${fromLat},${fromLng}/${toLat},${toLng}`;
+      console.log('Web URL:', url);
+      window.open(url);
+    }
+  };
+
+  const navigateToTrailhead = () => {
+    const fromTH = trailheads.find(th => th.id === fromTrailhead);
+    const toTH = trailheads.find(th => th.id === toTrailhead);
+    
+    console.log('From trailhead:', fromTH);
+    console.log('To trailhead:', toTH);
+    
+    if (!fromTH || !toTH) {
+      alert('Please select both trailheads');
+      return;
+    }
+
+    if (fromTH.id === toTH.id) {
+      alert('Please select different starting and destination trailheads');
+      return;
+    }
+
+    openInMaps(fromTH.lat, fromTH.lng, toTH.lat, toTH.lng, toTH.name);
+  };
+
+  const navigateFromCurrentLocation = (trailheadId) => {
+    const toTH = trailheads.find(th => th.id === trailheadId);
+    
+    console.log('Navigate to trailhead:', toTH);
+    
+    if (!toTH) {
+      alert('Trailhead not found');
+      return;
+    }
+    
+    if (currentLocation) {
+      // Use current location if available
+      console.log('Using current location:', currentLocation);
+      openInMaps(currentLocation.lat, currentLocation.lng, toTH.lat, toTH.lng, toTH.name);
+    } else {
+      // Fallback: just open the destination in maps (maps app will handle current location)
+      console.log('Using fallback navigation');
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      
+      if (isIOS) {
+        const url = `http://maps.apple.com/?daddr=${toTH.lat},${toTH.lng}&dirflg=d`;
+        console.log('iOS fallback URL:', url);
+        window.open(url);
+      } else if (isAndroid) {
+        const url = `https://www.google.com/maps/dir//${toTH.lat},${toTH.lng}`;
+        console.log('Android fallback URL:', url);
+        window.open(url);
+      } else {
+        const url = `https://www.google.com/maps/dir//${toTH.lat},${toTH.lng}`;
+        console.log('Web fallback URL:', url);
+        window.open(url);
+      }
+    }
+  };
+
+  // Calculate distance between two coordinates
+
+
+  // Calculate trail distance for display
+  const getTrailDistance = () => {
+    if (fromTrailhead && toTrailhead && fromTrailhead !== toTrailhead) {
+      const fromTH = trailheads.find(th => th.id === fromTrailhead);
+      const toTH = trailheads.find(th => th.id === toTrailhead);
+      
+      if (fromTH && toTH) {
+        const trailMiles = Math.abs(toTH.mile - fromTH.mile);
+        const drivingMiles = calculateDistance(fromTH.lat, fromTH.lng, toTH.lat, toTH.lng);
+        return {
+          trail: trailMiles,
+          driving: drivingMiles
+        };
+      }
+    }
+    return null;
+  };
+
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return (R * c).toFixed(1);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+      <div className="max-w-md mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Route className="text-green-600" size={28} />
+            <h1 className="text-xl font-bold text-gray-800">Centennial Trail</h1>
+          </div>
+          <p className="text-gray-600 text-sm">Snohomish County Navigation</p>
+        </div>
+
+        {/* Navigation Between Trailheads */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Car className="text-blue-600" size={20} />
+            Navigate Between Trailheads
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">From Trailhead:</label>
+              <select 
+                value={fromTrailhead} 
+                onChange={(e) => setFromTrailhead(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select starting trailhead</option>
+                {trailheads.map(th => (
+                  <option key={th.id} value={th.id}>
+                    {th.name} (Mile {th.mile})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">To Trailhead:</label>
+              <select 
+                value={toTrailhead} 
+                onChange={(e) => setToTrailhead(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Select destination trailhead</option>
+                {trailheads.map(th => (
+                  <option key={th.id} value={th.id}>
+                    {th.name} (Mile {th.mile})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Running Pace (per mile):</label>
+              <select 
+                value={runningPace} 
+                onChange={(e) => setRunningPace(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                {generatePaceOptions().map(pace => (
+                  <option key={pace} value={pace}>
+                    {pace} per mile
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <button 
+              onClick={navigateToTrailhead}
+              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Navigation size={20} />
+              Get Driving Directions
+            </button>
+            
+            {getTrailDistance() && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="text-blue-800 font-semibold text-center space-y-1">
+                  <p>🚶‍♂️ Trail Distance: {getTrailDistance().trail} miles</p>
+                  <p>🚗 Driving Distance: ~{getTrailDistance().driving} miles</p>
+                  <p>🏃‍♂️ Running Time: {getRunningTime(getTrailDistance().trail, runningPace)} at {runningPace}/mile</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Access to All Trailheads */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <MapPin className="text-blue-600" size={20} />
+            All Trailheads
+          </h2>
+          
+          <div className="space-y-3">
+            {trailheads.map(th => (
+              <div key={th.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{th.name}</h3>
+                    <p className="text-sm text-gray-600">{th.description}</p>
+                    <p className="text-xs text-green-600 font-medium">Mile {th.mile}</p>
+                  </div>
+                  <button
+                    onClick={() => navigateFromCurrentLocation(th.id)}
+                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-1 min-w-fit"
+                  >
+                    <Navigation size={16} />
+                    Go
+                  </button>
+                </div>
+                
+                {currentLocation && (
+                  <p className="text-xs text-gray-500">
+                    ~{calculateDistance(currentLocation.lat, currentLocation.lng, th.lat, th.lng)} miles from your location
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+          <h3 className="font-semibold text-blue-800 mb-2">How to Use:</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• Select trailheads to get driving directions between them</li>
+            <li>• Choose your running pace to see estimated trail running time</li>
+            <li>• Tap "Go" next to any trailhead to navigate from your current location</li>
+            <li>• Directions will open in your phone's default maps app</li>
+            <li>• Enable location services for distance estimates</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CentennialTrailNav;
